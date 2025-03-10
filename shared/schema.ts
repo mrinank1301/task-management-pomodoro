@@ -11,6 +11,7 @@ export const tasks = pgTable("tasks", {
   completed: boolean("completed").notNull().default(false),
   currentSession: integer("current_session").notNull().default(0),
   customTimerDuration: integer("custom_timer_duration"),
+  notes: text("notes").array().notNull().default([]), // Added notes field
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).pick({
@@ -19,6 +20,7 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   priority: true,
   categories: true,
   customTimerDuration: true,
+  notes: true, // Added notes to schema
 }).extend({
   priority: z.enum(["low", "medium", "high"]),
 });

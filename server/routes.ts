@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!result.success) {
       return res.status(400).json({ message: "Invalid task data" });
     }
-    
+
     const task = await storage.createTask(result.data);
     res.status(201).json(task);
   });
@@ -43,6 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const updateSchema = z.object({
       completed: z.boolean().optional(),
       currentSession: z.number().optional(),
+      notes: z.array(z.string()).optional(), // Added notes to update schema
     });
 
     const result = updateSchema.safeParse(req.body);

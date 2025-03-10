@@ -3,12 +3,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import type { Task, TaskStats } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, MessageSquarePlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskFilters } from "./task-filters";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 function calculateStats(tasks: Task[]): TaskStats {
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -41,6 +43,15 @@ export function TaskList() {
   const toggleCompleteMutation = useMutation({
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
       await apiRequest("PATCH", `/api/tasks/${id}`, { completed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: number; notes: string[] }) => {
+      await apiRequest("PATCH", `/api/tasks/${id}`, { notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -93,6 +104,7 @@ export function TaskList() {
             task={task}
             onDelete={() => deleteMutation.mutate(task.id)}
             onToggleComplete={(completed) => toggleCompleteMutation.mutate({ id: task.id, completed })}
+            onAddNote={(notes) => addNoteMutation.mutate({ id: task.id, notes })}
           />
         ))}
       </div>
@@ -106,6 +118,7 @@ export function TaskList() {
               task={task}
               onDelete={() => deleteMutation.mutate(task.id)}
               onToggleComplete={(completed) => toggleCompleteMutation.mutate({ id: task.id, completed })}
+              onAddNote={(notes) => addNoteMutation.mutate({ id: task.id, notes })}
             />
           ))}
         </div>
@@ -118,9 +131,23 @@ interface TaskCardProps {
   task: Task;
   onDelete: () => void;
   onToggleComplete: (completed: boolean) => void;
+  onAddNote: (notes: string[]) => void;
 }
 
-function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
+function TaskCard({ task, onDelete, onToggleComplete, onAddNote }: TaskCardProps) {
+  const [newNote, setNewNote] = useState("");
+  const { toast } = useToast();
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    const updatedNotes = [...(task.notes || []), newNote.trim()];
+    onAddNote(updatedNotes);
+    setNewNote("");
+    toast({
+      description: "Note added successfully",
+    });
+  };
+
   return (
     <Card className={`p-4 ${task.completed ? 'bg-muted/50' : ''}`}>
       <div className="space-y-3">
@@ -145,7 +172,7 @@ function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={onDelete}
+              onClick={() => onDelete()}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -164,6 +191,38 @@ function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
               {category}
             </Badge>
           ))}
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Add a note..."
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddNote();
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleAddNote}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {task.notes && task.notes.length > 0 && (
+            <div className="pl-4 border-l-2 border-muted space-y-1">
+              {task.notes.map((note, index) => (
+                <p key={index} className="text-sm text-muted-foreground">
+                  {note}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
