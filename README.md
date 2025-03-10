@@ -94,6 +94,22 @@ npm run build
 npm start
 ```
 
+## Deployment
+
+### Deploy on Replit
+
+1. Open the project in Replit
+2. Click on the "Deploy" button in your workspace
+3. Follow the deployment wizard to make your app live
+4. Access your app via the provided `.replit.app` domain
+
+### Deploy Manually
+
+The application can be deployed to any Node.js hosting platform. Make sure to:
+1. Set up your environment variables if needed
+2. Run `npm run build` to create the production build
+3. Start the server using `npm start`
+
 ## License
 
 MIT
