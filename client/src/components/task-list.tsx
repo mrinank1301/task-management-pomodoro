@@ -3,9 +3,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import type { Task, TaskStats } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Trash2, Play } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function calculateStats(tasks: Task[]): TaskStats {
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -33,6 +34,15 @@ export function TaskList() {
     },
   });
 
+  const toggleCompleteMutation = useMutation({
+    mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
+      await apiRequest("PATCH", `/api/tasks/${id}`, { completed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+  });
+
   if (isLoading) {
     return <div className="text-center">Loading tasks...</div>;
   }
@@ -46,6 +56,8 @@ export function TaskList() {
   }
 
   const stats = calculateStats(tasks);
+  const activeTasks = tasks.filter(t => !t.completed);
+  const completedTasks = tasks.filter(t => t.completed);
 
   return (
     <div className="space-y-6">
@@ -66,56 +78,100 @@ export function TaskList() {
         </div>
       </Card>
 
+      {/* Active Tasks */}
       <div className="space-y-4">
-        {tasks.map((task) => (
-          <Card key={task.id} className="p-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{task.title}</span>
-                  <Badge variant={
-                    task.priority === "high" ? "destructive" :
-                    task.priority === "medium" ? "default" :
-                    "secondary"
-                  }>
-                    {task.priority}
-                  </Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteMutation.mutate(task.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {task.description && (
-                <p className="text-sm text-muted-foreground">{task.description}</p>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                {task.categories.map((category, index) => (
-                  <Badge key={index} variant="outline">
-                    {category}
-                  </Badge>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {task.customTimerDuration && (
-                  <span>Timer: {task.customTimerDuration}min</span>
-                )}
-                {task.currentSession > 0 && (
-                  <span>Sessions: {task.currentSession}</span>
-                )}
-              </div>
-            </div>
-          </Card>
+        <h2 className="text-lg font-semibold">Active Tasks</h2>
+        {activeTasks.map((task) => (
+          <TaskCard 
+            key={task.id} 
+            task={task} 
+            onDelete={deleteMutation.mutate}
+            onToggleComplete={toggleCompleteMutation.mutate}
+          />
         ))}
       </div>
+
+      {/* Completed Tasks */}
+      {completedTasks.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Completed Tasks</h2>
+          {completedTasks.map((task) => (
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              onDelete={deleteMutation.mutate}
+              onToggleComplete={toggleCompleteMutation.mutate}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+interface TaskCardProps {
+  task: Task;
+  onDelete: (id: number) => void;
+  onToggleComplete: (data: { id: number; completed: boolean }) => void;
+}
+
+function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
+  return (
+    <Card key={task.id} className={`p-4 ${task.completed ? 'bg-muted/50' : ''}`}>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox 
+              checked={task.completed}
+              onCheckedChange={(checked) => {
+                onToggleComplete({ id: task.id, completed: checked as boolean });
+              }}
+            />
+            <span className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+              {task.title}
+            </span>
+            <Badge variant={
+              task.priority === "high" ? "destructive" :
+              task.priority === "medium" ? "default" :
+              "secondary"
+            }>
+              {task.priority}
+            </Badge>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(task.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {task.description && (
+          <p className={`text-sm ${task.completed ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+            {task.description}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {task.categories.map((category, index) => (
+            <Badge key={index} variant="outline">
+              {category}
+            </Badge>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          {task.customTimerDuration && (
+            <span>Timer: {task.customTimerDuration}min</span>
+          )}
+          {task.currentSession > 0 && (
+            <span>Sessions: {task.currentSession}</span>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
