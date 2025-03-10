@@ -23,7 +23,7 @@ function calculateStats(tasks: Task[]): TaskStats {
 }
 
 export function TaskList() {
-  const { data: tasks, isLoading } = useQuery<Task[]>({
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
 
@@ -91,8 +91,8 @@ export function TaskList() {
           <TaskCard
             key={task.id}
             task={task}
-            onDelete={deleteMutation.mutate}
-            onToggleComplete={toggleCompleteMutation.mutate}
+            onDelete={() => deleteMutation.mutate(task.id)}
+            onToggleComplete={(completed) => toggleCompleteMutation.mutate({ id: task.id, completed })}
           />
         ))}
       </div>
@@ -104,8 +104,8 @@ export function TaskList() {
             <TaskCard
               key={task.id}
               task={task}
-              onDelete={deleteMutation.mutate}
-              onToggleComplete={toggleCompleteMutation.mutate}
+              onDelete={() => deleteMutation.mutate(task.id)}
+              onToggleComplete={(completed) => toggleCompleteMutation.mutate({ id: task.id, completed })}
             />
           ))}
         </div>
@@ -116,29 +116,27 @@ export function TaskList() {
 
 interface TaskCardProps {
   task: Task;
-  onDelete: (id: number) => void;
-  onToggleComplete: (data: { id: number; completed: boolean }) => void;
+  onDelete: () => void;
+  onToggleComplete: (completed: boolean) => void;
 }
 
 function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
   return (
-    <Card key={task.id} className={`p-4 ${task.completed ? 'bg-muted/50' : ''}`}>
+    <Card className={`p-4 ${task.completed ? 'bg-muted/50' : ''}`}>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox
               checked={task.completed}
-              onCheckedChange={(checked) => {
-                onToggleComplete({ id: task.id, completed: checked as boolean });
-              }}
+              onCheckedChange={(checked) => onToggleComplete(checked as boolean)}
             />
             <span className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
               {task.title}
             </span>
             <Badge variant={
               task.priority === "high" ? "destructive" :
-                task.priority === "medium" ? "default" :
-                  "secondary"
+              task.priority === "medium" ? "default" :
+              "secondary"
             }>
               {task.priority}
             </Badge>
@@ -147,7 +145,7 @@ function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(task.id)}
+              onClick={onDelete}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

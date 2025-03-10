@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,8 @@ export function TaskFilters({ tasks, onFilterChange }: TaskFiltersProps) {
     new Set(tasks.flatMap((task) => task.categories))
   );
 
-  const applyFilters = () => {
+  // Apply filters whenever any filter changes
+  useEffect(() => {
     let filtered = [...tasks];
 
     // Apply search filter
@@ -30,7 +31,7 @@ export function TaskFilters({ tasks, onFilterChange }: TaskFiltersProps) {
       filtered = filtered.filter(
         (task) =>
           task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query)
+          (task.description?.toLowerCase() || '').includes(query)
       );
     }
 
@@ -47,7 +48,7 @@ export function TaskFilters({ tasks, onFilterChange }: TaskFiltersProps) {
     }
 
     onFilterChange(filtered);
-  };
+  }, [searchQuery, priorityFilter, selectedCategories, tasks]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -56,11 +57,6 @@ export function TaskFilters({ tasks, onFilterChange }: TaskFiltersProps) {
         : [...prev, category]
     );
   };
-
-  // Apply filters whenever any filter changes
-  useState(() => {
-    applyFilters();
-  }, [searchQuery, priorityFilter, selectedCategories]);
 
   return (
     <div className="space-y-4">
