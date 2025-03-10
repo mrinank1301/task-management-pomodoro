@@ -7,6 +7,8 @@ import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaskFilters } from "./task-filters";
+import { useState } from "react";
 
 function calculateStats(tasks: Task[]): TaskStats {
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -24,6 +26,8 @@ export function TaskList() {
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -55,12 +59,15 @@ export function TaskList() {
     );
   }
 
-  const stats = calculateStats(tasks);
-  const activeTasks = tasks.filter(t => !t.completed);
-  const completedTasks = tasks.filter(t => t.completed);
+  const displayTasks = filteredTasks.length > 0 ? filteredTasks : tasks;
+  const stats = calculateStats(displayTasks);
+  const activeTasks = displayTasks.filter(t => !t.completed);
+  const completedTasks = displayTasks.filter(t => t.completed);
 
   return (
     <div className="space-y-6">
+      <TaskFilters tasks={tasks} onFilterChange={setFilteredTasks} />
+
       <Card className="p-4 bg-primary/5">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
@@ -78,27 +85,25 @@ export function TaskList() {
         </div>
       </Card>
 
-      {/* Active Tasks */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Active Tasks</h2>
+        <h2 className="text-lg font-semibold">Active Tasks ({activeTasks.length})</h2>
         {activeTasks.map((task) => (
-          <TaskCard 
-            key={task.id} 
-            task={task} 
+          <TaskCard
+            key={task.id}
+            task={task}
             onDelete={deleteMutation.mutate}
             onToggleComplete={toggleCompleteMutation.mutate}
           />
         ))}
       </div>
 
-      {/* Completed Tasks */}
       {completedTasks.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Completed Tasks</h2>
+          <h2 className="text-lg font-semibold">Completed Tasks ({completedTasks.length})</h2>
           {completedTasks.map((task) => (
-            <TaskCard 
-              key={task.id} 
-              task={task} 
+            <TaskCard
+              key={task.id}
+              task={task}
               onDelete={deleteMutation.mutate}
               onToggleComplete={toggleCompleteMutation.mutate}
             />
@@ -121,7 +126,7 @@ function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Checkbox 
+            <Checkbox
               checked={task.completed}
               onCheckedChange={(checked) => {
                 onToggleComplete({ id: task.id, completed: checked as boolean });
@@ -132,8 +137,8 @@ function TaskCard({ task, onDelete, onToggleComplete }: TaskCardProps) {
             </span>
             <Badge variant={
               task.priority === "high" ? "destructive" :
-              task.priority === "medium" ? "default" :
-              "secondary"
+                task.priority === "medium" ? "default" :
+                  "secondary"
             }>
               {task.priority}
             </Badge>
