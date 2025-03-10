@@ -41,11 +41,16 @@ export function useTimer(customDuration?: number) {
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
+  // Calculate progress percentage
+  const totalSeconds = (isBreak ? POMODORO_BREAK_MINUTES : (customDuration || POMODORO_WORK_MINUTES)) * 60;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+
   return {
     minutes,
     seconds,
     isRunning,
     isBreak,
+    progress,
     toggle,
     reset
   };
